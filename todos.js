@@ -44,7 +44,7 @@ app.get("/todos", async (req, res, next) => {
 app.get("/todos/:id", async (req, res, next) => {
     try {
         const db = await connectDB();
-        const id = ObjectId(req.params.id);
+        const id =new ObjectId(req.params.id);
         const todo = await db.collection("todos").findOne({ _id: id });
         if (todo) {
             res.json(todo);
@@ -60,11 +60,11 @@ app.get("/todos/:id", async (req, res, next) => {
 app.put("/todos/:id", async (req, res, next) => {
     try {
         const db = await connectDB();
-        const Id = ObjectId(req.params.id);
+        const Id = new ObjectId(req.params.id);
         const { task, done } = req.body;
         const result = await db
             .collection("todos")
-            .findOne({ _id: Id }, { $set: { task, done } });
+            .updateOne({ _id: Id }, { $set: { task, done } });
         if (result.modifiedCount) {
             res.json({ message: "Todo Updated!" });
         } else {
@@ -78,7 +78,7 @@ app.put("/todos/:id", async (req, res, next) => {
 app.delete("/todos/:id", async (req, res, next) => {
     try {
         const db = await connectDB();
-        const iT = ObjectId(req.params.id);
+        const iT = new ObjectId(req.params.id);
         const result = await db.collection("todos").deleteOne({ _id: iT });
         if (result.deletedCount) {
             res.json({ message: "Todo deleted" });
