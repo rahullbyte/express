@@ -1,24 +1,26 @@
 import express from "express";
-import { MongoClient, ObjectId } from "mongodb";
+import multer from "multer";
+import fs from 'fs'
 
 const app = express();
 const port = 3000;
 
-app.use(express.json());
+const storage= multer.diskStorage({
+    destination: (req, file, cb)=>{
+        cb(null, 'uploads/');
+    },
+    filename: (req, file, cb)=>{
+        cb(null, Date.now()+ '-'+file.originalname);
+    }
+})
 
-const url = "mongodb://localhost:27017";
-const dbName = "expressApp";
+const upload = multer({storage});
 
-async function connectDB() {
-    const client = await MongoClient.connect(url);
-    return client.db(dbName);
-}
+if(!fs.existsSync('uploads')) fs.mkdirSync('uploads')
 
-
-
-app.use((err, req, res, next) => {
-    res.status(500).json({ error: err.message });
-});
+app.post('/upload', upload.single('file'), (req, res)=>{
+    res.json({message : 'File upload', filename:  req.file.fieldname})
+})
 
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
