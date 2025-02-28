@@ -1,149 +1,102 @@
 import express from "express";
+import session from "express-session";
+import cookieParser from "cookie-parser";
+import { MongoClient } from "mongodb";
+import MongoStore from 'connect-mongo'
 
 const app = express();
 const port = 3000;
 
-// app.use((req, res, next) => {
-//        next(202);
-// });
+app.use(express.json())
+app.use(express.urlencoded({extended: true}))
+app.use(cookieParser());
 
-// const apiCodes =[
-//     {code: 200, message: "Done"},
-//     {code: 400, message: "unauthorized"},
-//     {code: 500, message: "invalid"},
-//     {code: 202, message: "created"},
-//     {code: 403, message: "false"},
-// ]
+app.use(session({
+    secret: "my-secret",
+    resave: false,
+    saveUninitialized : false,
+    store: MongoStore.create({ mongoUrl: 'mongodb://localhost:27017/expressApp' })
+}))
 
-// app.use((err, req, res, next) => {
+const url = 'mongodb://localhost:27017';
+const dbName = 'expressApp';
 
-//    const match = apiCodes.find(item => item.code === err);
+async function connectDB() {
+    const client = await MongoClient.connect(url);
+    return client.db(dbName);
+}
 
-//     if (match) {
-//         res.status(match.code).send(match.message);
-//     } else {
-//         res.status(500).send("Unknown error");
+// app.post('/signup', async (req, res, next)=>{
+//     try {
+//         const db = await connectDB();
+//         const {username, password} =req.body;
+
+//         const user = {username, password};
+
+//         const result= await db.collection('users').insertOne(user)
+//         res.json({message: 'User created', id: result.insertedId})
+
+//     } catch (error) {
+//         next(new Error('Signup failed'))
 //     }
-// });
-
-// app.get('/', (req, res) => {
-//     res.send('Hello world!')
 // })
 
-// // GET request to the root path
-// app.get("/", (req, res) => {
-//   res.send("Hello, this is the homepage!");
-// });
+// app.post ('/login', async (req, res, next)=>{
+//     try {
+//         const db = await connectDB();
+//         const {username, password}= req.body;
+//         const user = await db.collection('users').findOne({username, password});
 
-// // GET request to /about
-// app.get('/about', (req, res) => {
-//     res.send('This is the about page.');
-// });
-
-// app.get('/submit', (req, res, next)=>{
-//     res.send('data Submitted')
+//         if(user){
+//             req.session.user = user;
+//             res.json({message: 'Logged in Successful'})
+//         }else{
+//             res.status(401).json({message: 'Invalid Credentials'})
+//         }
+//     } catch (error) {
+//         next (new Error('Login failed'))
+//     }
 // })
 
-// app.get('*', (req, res, next)=>{
-//     res.send('404- page Not Found')
+// app.get('/profile', (req, res)=>{
+//     if(req.session.user){
+//         res.json({message: `Welcome, ${req.session.user.username}!`})
+//     }else{
+//         res.status(403).json({message: 'Please log in'})
+//     }
 // })
 
-// app.get('/test', (req, res, next)=>{
-//     console.log(`Method: ${req.method}`)
-
-//     console.log(`URL: ${req.url}`);
-
-//     res.status(200).json({
-//         message: 'Test Successful',
-//         method: req.method
+// app.get('/logout', (req, res)=>{
+//     req.session.destroy(()=>{
+//         res.json({message: 'Logged out'})
 //     })
 // })
 
-// app.get('/user/:id', (req, res)=>{
-//     const userId = req.params.id;
-//     res.send(`User ID: ${userId}`)
-// })
 
-// app.get("/search", (req, res) => {
-//   const query = req.query.q;
+//Using the Session store on mongodb not in Ram
 
-//   res.send(`You Searched for ${query}`);
-// });
+app.get('/login', (req, res) => {
+    req.session.user = { username: 'bob', loggedInAt: new Date() };
+    res.send('Logged in with session!');
+});
 
-// app.get('/error',(req, res, next)=>{
-//   const err = new Error('Something went wrong!');
-//   err.status = 400;
-//   next(err)
-// })
+app.get('/profile', (req, res) => {
+    if (req.session.user) {
+        res.json(req.session.user);
+    } else {
+        res.status(403).send('Not logged in');
+    }
+});
 
-// app.use((err, req, res, next)=>{
-//   res.status(err.status || 500).json({
-//     error: err.message
-//   })
-// })
+app.get('/logout', (req, res) => {
+    req.session.destroy(() => {
+        res.send('Logged out');
+    });
+});
 
-//A small app
-
-// app.use((req, res, next)=>{
-//   console.log(`${req.method} ${req.url}`);
-//   next();
-// })
-
-// app.use(express.static('public'));
-
-// app.get('/', (req, res)=>{
-//   res.send('Welcome to the API!')
-// })
-
-// app.get('/user/:id', (req, res)=>{
-//   res.json({
-//     id: req.params.id,
-//     message: `Hello, user ${req.params.id}`
-//   })
-// })
-
-// app.get('/search', (req, res)=>{
-//   const query = req.query.q || 'nothing';
-//   res.send(`Search result for: ${query}`)
-// })
-
-// app.get('/fail', (req, res, next)=>{
-//   next(new Error('Intentional failure'))
-// })
-
-// app.use((err, req, res, next)=>{
-//   res.status(err.status || 500).json({
-//     error: err.message
-//   })
-// })
-
-// app.get('*', (req, res, next)=>{
-//   res.send('404- Not found')
-// })
-
-// app.use(express.json());
-
-// app.post('/submit', (req, res) => {
-//   const data = req.body; 
-//   res.json({
-//       received: data,
-//       message: 'Data received successfully'
-//   });
-// });
-
-// app.use(express.urlencoded({ extended: true })); 
-
-// app.post('/form', (req, res) => {
-//     const { username } = req.body;
-//     res.send(`Hello, ${username}!`);
-// });
-
-// app.set('view engine', 'ejs');
-
-// app.get('/greet/:name', (req, res) => {
-//     const name = req.params.name;
-//     res.render('greet', { user: name });
-// });
+app.use((err, req, res, next) => {
+    res.status(500).json({ error: err.message });
+});
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
