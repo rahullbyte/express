@@ -1,41 +1,103 @@
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
+import express from "express";
+import session from "express-session";
+import cookieParser from "cookie-parser";
+import { MongoClient } from "mongodb";
+import MongoStore from 'connect-mongo'
 
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
+const app = express();
+const port = 3000;
 
-var app = express();
-
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
-
-app.use(logger('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.json())
+app.use(express.urlencoded({extended: true}))
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
+app.use(session({
+    secret: "my-secret",
+    resave: false,
+    saveUninitialized : false,
+    store: MongoStore.create({ mongoUrl: 'mongodb://localhost:27017/expressApp' })
+}))
 
-// catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  next(createError(404));
+const url = 'mongodb://localhost:27017';
+const dbName = 'expressApp';
+
+async function connectDB() {
+    const client = await MongoClient.connect(url);
+    return client.db(dbName);
+}
+
+// app.post('/signup', async (req, res, next)=>{
+//     try {
+//         const db = await connectDB();
+//         const {username, password} =req.body;
+
+//         const user = {username, password};
+
+//         const result= await db.collection('users').insertOne(user)
+//         res.json({message: 'User created', id: result.insertedId})
+
+//     } catch (error) {
+//         next(new Error('Signup failed'))
+//     }
+// })
+
+// app.post ('/login', async (req, res, next)=>{
+//     try {
+//         const db = await connectDB();
+//         const {username, password}= req.body;
+//         const user = await db.collection('users').findOne({username, password});
+
+//         if(user){
+//             req.session.user = user;
+//             res.json({message: 'Logged in Successful'})
+//         }else{
+//             res.status(401).json({message: 'Invalid Credentials'})
+//         }
+//     } catch (error) {
+//         next (new Error('Login failed'))
+//     }
+// })
+
+// app.get('/profile', (req, res)=>{
+//     if(req.session.user){
+//         res.json({message: `Welcome, ${req.session.user.username}!`})
+//     }else{
+//         res.status(403).json({message: 'Please log in'})
+//     }
+// })
+
+// app.get('/logout', (req, res)=>{
+//     req.session.destroy(()=>{
+//         res.json({message: 'Logged out'})
+//     })
+// })
+
+
+//Using the Session store on mongodb not in Ram
+
+app.get('/login', (req, res) => {
+    req.session.user = { username: 'bob', loggedInAt: new Date() };
+    res.send('Logged in with session!');
 });
 
-// error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
+app.get('/profile', (req, res) => {
+    if (req.session.user) {
+        res.json(req.session.user);
+    } else {
+        res.status(403).send('Not logged in');
+    }
 });
 
-module.exports = app;
+app.get('/logout', (req, res) => {
+    req.session.destroy(() => {
+        res.send('Logged out');
+    });
+});
+
+app.use((err, req, res, next) => {
+    res.status(500).json({ error: err.message });
+});
+
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
